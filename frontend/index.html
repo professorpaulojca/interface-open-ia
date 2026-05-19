@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador IA de DOCX e XLSX</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="bg-glow bg-glow--one"></div>
+    <div class="bg-glow bg-glow--two"></div>
+
+    <main class="page">
+        <header class="topbar card">
+            <div class="brand">
+                <span class="brand-dot"></span>
+                <div>
+                    <p class="eyebrow">OpenAI Responses + Code Interpreter</p>
+                    <h1>Document Studio IA</h1>
+                </div>
+            </div>
+            <div class="meta">
+                <span class="chip">Sem reload</span>
+                <span class="chip">Upload opcional</span>
+                <span class="chip">DOCX/XLSX</span>
+            </div>
+        </header>
+
+        <section class="card hero-card">
+            <div class="hero-content">
+                <h2>Gere documentos inteligentes com contexto de arquivo</h2>
+                <p class="lead">
+                    Envie seu prompt e, se quiser, adicione um anexo em <strong>pdf/docx/xlsx/txt</strong>.
+                    A interface atualiza em tempo real e mantém tudo sincronizado no histórico.
+                </p>
+            </div>
+            <div class="stats-grid">
+                <article class="stat-card">
+                    <span class="stat-label">Requisições na sessão</span>
+                    <strong id="sessionRequests" class="stat-value">0</strong>
+                </article>
+                <article class="stat-card">
+                    <span class="stat-label">Gerados com sucesso</span>
+                    <strong id="sessionSuccess" class="stat-value">0</strong>
+                </article>
+                <article class="stat-card">
+                    <span class="stat-label">Taxa de sucesso</span>
+                    <strong id="sessionRate" class="stat-value">0%</strong>
+                </article>
+            </div>
+        </section>
+
+        <div class="content-grid">
+            <section class="card main-card">
+                <div class="section-head">
+                    <h2>Nova geração</h2>
+                    <span class="hint">Atalho: Ctrl + Enter</span>
+                </div>
+
+                <div class="input-group">
+                    <label for="prompt">Prompt</label>
+                    <textarea id="prompt" rows="8" placeholder="Exemplo: Resuma o conteúdo do anexo e gere uma planilha xlsx com os principais pontos."></textarea>
+                </div>
+
+                <div class="input-group">
+                    <label for="file">Arquivo opcional</label>
+                    <label for="file" id="dropzone" class="dropzone">
+                        <span class="dropzone-icon">⬆</span>
+                        <span class="dropzone-title">Arraste e solte o arquivo aqui</span>
+                        <span class="dropzone-subtitle">ou clique para selecionar</span>
+                        <span class="dropzone-hint">Formatos aceitos: pdf, docx, xlsx, txt (até 25MB)</span>
+                    </label>
+                    <input id="file" type="file" accept=".pdf,.docx,.xlsx,.txt">
+                    <div id="filePreview" class="file-preview">Nenhum arquivo selecionado.</div>
+                </div>
+
+                <div class="actions">
+                    <button id="generateButton">Gerar arquivo</button>
+                    <button id="historyButton" class="secondary">Atualizar histórico</button>
+                    <button id="clearButton" class="danger">Limpar histórico</button>
+                </div>
+
+                <div id="status" class="status" aria-live="polite">Pronto para gerar.</div>
+            </section>
+
+            <section class="card right-column">
+                <section id="result" class="result-card" aria-live="polite">
+                    <div class="section-head">
+                        <h2>Último resultado</h2>
+                        <span class="chip">Tempo real</span>
+                    </div>
+                    <div id="resultContent" class="result-empty">Ainda não há documento gerado nesta sessão.</div>
+                </section>
+
+                <section class="history-card">
+                    <div class="history-header">
+                        <h2>Histórico acumulado</h2>
+                        <span id="historyBadge" class="chip">0 linhas</span>
+                    </div>
+                    <pre id="history">O histórico aparecerá aqui.</pre>
+                </section>
+            </section>
+        </div>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
