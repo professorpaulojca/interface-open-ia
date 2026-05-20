@@ -1,83 +1,256 @@
-# Gerador IA de documentos DOCX/XLSX com Code Interpreter
+﻿# Document Studio IA — Gerador de Documentos com OpenAI
 
-Projeto didático com:
+![Java](https://img.shields.io/badge/Java-17-orange?style=for-the-badge&logo=openjdk)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.5-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)
+![OpenAI](https://img.shields.io/badge/OpenAI-Responses%20API-111827?style=for-the-badge&logo=openai)
+![Frontend](https://img.shields.io/badge/Frontend-HTML%20%2B%20CSS%20%2B%20JS-2563EB?style=for-the-badge&logo=javascript)
+![Status](https://img.shields.io/badge/Status-Pronto%20para%20uso-22C55E?style=for-the-badge)
 
-- Frontend simples em HTML, CSS e JavaScript Vanilla.
-- Backend Java Spring Boot.
-- Histórico acumulado de prompts salvo em arquivo texto.
-- Chamada para a OpenAI Responses API com a ferramenta `code_interpreter`.
-- Download do arquivo gerado pela própria IA no container da OpenAI.
+Interface moderna e backend Spring Boot para gerar documentos com IA a partir de um prompt e, opcionalmente, um arquivo de apoio. O sistema recebe uploads em `multipart/form-data`, extrai contexto de anexos `pdf`, `docx`, `xlsx` e `txt`, chama a OpenAI Responses API e disponibiliza o arquivo final para download.
+
+> Projeto publicado em: `https://github.com/professorpaulojca/interface-open-ia.git`
+
+---
+
+## Sumário
+
+- [Visão Geral](#visão-geral)
+- [Principais Recursos](#principais-recursos)
+- [Demonstração do Fluxo](#demonstração-do-fluxo)
+- [Arquitetura](#arquitetura)
+- [Stack Técnica](#stack-técnica)
+- [Estrutura do Projeto](#estrutura-do-projeto)
+- [Como Executar](#como-executar)
+- [Configuração de Ambiente](#configuração-de-ambiente)
+- [Como Usar](#como-usar)
+- [Endpoints](#endpoints)
+- [Persistência Local](#persistência-local)
+- [Segurança](#segurança)
+- [Troubleshooting](#troubleshooting)
+- [Próximos Passos](#próximos-passos)
+
+---
+
+## Visão Geral
+
+O **Document Studio IA** é uma aplicação full stack didática e funcional composta por:
+
+- Um **frontend moderno** em HTML, CSS e JavaScript Vanilla.
+- Um **backend Java Spring Boot** organizado por camadas inspiradas em Clean Architecture/Hexagonal Architecture.
+- Integração com a **OpenAI Responses API**.
+- Geração de arquivos `docx`, `xlsx` ou `txt`, conforme o tipo de solicitação do usuário.
+- Upload opcional de arquivo de apoio para enriquecer o contexto enviado à IA.
+- Histórico local de prompts e links de arquivos gerados.
+
+O objetivo é entregar uma experiência simples para o usuário final e, ao mesmo tempo, um código organizado para estudo, extensão e manutenção.
+
+---
+
+## Principais Recursos
+
+### Experiência do Usuário
+
+- Interface escura moderna com estilo **glassmorphism**.
+- Layout responsivo para desktop, tablet e mobile.
+- Upload por clique ou **drag-and-drop**.
+- Feedback de estado sem recarregar a página.
+- Prévia do arquivo selecionado com nome, extensão e tamanho.
+- Métricas de sessão: requisições, sucessos e taxa de sucesso.
+- Resultado renderizado em tempo real com link para baixar novamente.
+- Histórico sincronizado via API, sem `reload` da tela.
+
+### Backend e Integração IA
+
+- Endpoint `multipart/form-data` para `prompt` + `file` opcional.
+- Validação de anexos por extensão e tamanho.
+- Extração de texto local para `pdf`, `docx`, `xlsx` e `txt`.
+- Detecção automática do tipo de documento pelo prompt.
+- Uso de `code_interpreter` quando o prompt indica `docx` ou `xlsx`.
+- Download do arquivo gerado no container da OpenAI.
+- Persistência local dos arquivos finais em `data/generated`.
+- Histórico em arquivo texto com links de download.
+- Tratamento centralizado de erros via `GlobalExceptionHandler`.
+
+---
+
+## Demonstração do Fluxo
+
+```mermaid
+flowchart LR
+    A[Usuário informa prompt] --> B[Seleciona anexo opcional]
+    B --> C[Frontend monta FormData]
+    C --> D[POST /api/documentos/gerar]
+    D --> E[Backend valida prompt e arquivo]
+    E --> F[Extrai texto do anexo, se existir]
+    F --> G[Detecta tipo: TXT, DOCX ou XLSX]
+    G --> H[Chama OpenAI Responses API]
+    H --> I[Recebe texto ou arquivo gerado]
+    I --> J[Salva arquivo em data/generated]
+    J --> K[Retorna JSON com downloadUrl]
+    K --> L[Frontend atualiza tela sem reload]
+```
+
+---
 
 ## Arquitetura
 
-Veja o diagrama detalhado da arquitetura em [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md).
+A documentação completa da arquitetura está em:
 
-## Ideia da versão avançada
+📌 [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md)
 
-Nesta versão, o Java **não monta** o Excel nem o Word com Apache POI.
+Ela contém diagramas detalhados de:
 
-O fluxo é:
+- Visão geral frontend/backend/OpenAI/storage.
+- Camadas do backend.
+- Fluxo de geração de documento.
+- Fluxo de download.
+- Fluxo de histórico.
+- Persistência local.
 
-```text
-Usuário digita o prompt
-→ Backend grava o prompt em data/prompts.txt
-→ Backend envia o histórico acumulado para a OpenAI
-→ OpenAI usa Code Interpreter para gerar um .xlsx ou .docx
-→ OpenAI retorna uma anotação container_file_citation
-→ Backend extrai container_id e file_id
-→ Backend baixa o arquivo binário
-→ Navegador baixa o arquivo final
+### Resumo Arquitetural
+
+```mermaid
+flowchart TB
+    subgraph Frontend[Frontend]
+        HTML[index.html]
+        CSS[style.css]
+        JS[app.js]
+    end
+
+    subgraph Backend[Backend Spring Boot]
+        Rest[interfaces/rest]
+        Domain[domain/usecase + model + gateway]
+        Infra[infrastructure/client + storage + extractor]
+    end
+
+    subgraph External[Serviços Externos]
+        OpenAI[OpenAI Responses API]
+    end
+
+    subgraph Local[Persistência Local]
+        Prompts[data/prompts.txt]
+        Generated[data/generated]
+        Debug[data/last-openai-response.json]
+    end
+
+    Frontend -->|fetch multipart/form-data| Rest
+    Rest --> Domain
+    Domain --> Infra
+    Infra --> OpenAI
+    Infra --> Local
+    Rest -->|JSON + downloadUrl| Frontend
 ```
 
-## Estrutura do projeto
+---
+
+## Stack Técnica
+
+| Área | Tecnologia |
+|---|---|
+| Linguagem backend | Java 17 |
+| Framework backend | Spring Boot 3.4.5 |
+| API REST | Spring Web |
+| Validação | Spring Validation + regras de domínio |
+| OpenAPI/Swagger | `springdoc-openapi` |
+| Integração IA | OpenAI Responses API |
+| Cliente HTTP | `java.net.http.HttpClient` |
+| PDF | Apache PDFBox |
+| DOCX/XLSX | Apache POI |
+| Frontend | HTML5, CSS3, JavaScript Vanilla |
+| Persistência | File System local |
+| Build | Maven |
+
+---
+
+## Estrutura do Projeto
 
 ```text
 gerador-ia-code-interpreter/
-├── backend/
-│   ├── pom.xml
-│   └── src/main/
-│       ├── java/br/com/aula/gerador/
-│       │   ├── GeradorIaApplication.java
-│       │   ├── config/CorsConfig.java
-│       │   ├── controller/DocumentController.java
-│       │   ├── controller/ApiExceptionHandler.java
-│       │   ├── dto/
-│       │   └── service/
-│       └── resources/application.properties
-└── frontend/
-    ├── index.html
-    ├── style.css
-    └── app.js
+├── README.md
+├── docs/
+│   └── ARQUITETURA.md
+├── frontend/
+│   ├── index.html
+│   ├── style.css
+│   └── app.js
+└── backend/
+    ├── pom.xml
+    ├── .env.example
+    └── src/main/
+        ├── java/br/com/aula/gerador/
+        │   ├── GeradorIaApplication.java
+        │   ├── application/service/
+        │   ├── domain/
+        │   │   ├── exception/
+        │   │   ├── gateway/
+        │   │   ├── model/
+        │   │   ├── usecase/
+        │   │   └── validation/
+        │   ├── infrastructure/
+        │   │   ├── client/
+        │   │   ├── config/
+        │   │   ├── extractor/
+        │   │   └── storage/
+        │   └── interfaces/rest/
+        │       ├── dto/
+        │       ├── exception/
+        │       └── mapper/
+        └── resources/
+            └── application.properties
 ```
 
-## Atenção sobre chave de API
+---
 
-Nunca coloque a chave da OpenAI diretamente no código.
+## Como Executar
 
-Configure a chave por variável de ambiente.
+### Pré-requisitos
 
-No Windows PowerShell:
+- Java 17+
+- Maven 3.9+
+- Chave da OpenAI configurada em variável de ambiente
+- Navegador moderno
+- Opcional: VS Code + extensão Live Server
+
+### 1. Clonar o repositório
 
 ```powershell
-setx OPENAI_API_KEY "sua_chave_nova_aqui"
-setx OPENAI_MODEL "gpt-4.1"
+git clone https://github.com/professorpaulojca/interface-open-ia.git
+Set-Location interface-open-ia
 ```
 
-Depois feche e abra o terminal novamente.
+### 2. Configurar ambiente do backend
 
-> Observação: use um modelo com suporte à ferramenta Code Interpreter. O projeto deixa `gpt-4.1` como padrão porque é o modelo usado nos exemplos atuais da documentação da OpenAI para Code Interpreter. Você pode trocar por outro modelo compatível usando `OPENAI_MODEL`.
-
-## Rodando o backend
-
-Entre na pasta do backend:
-
-```bash
-cd backend
+```powershell
+Copy-Item backend\.env.example backend\.env
 ```
 
-Execute:
+Edite `backend/.env` e configure:
 
-```bash
+```dotenv
+OPENAI_API_KEY=coloque_sua_chave_real_aqui
+OPENAI_MODEL=gpt-4.1-mini
+OPENAI_BASE_URL=https://api.openai.com/v1
+OPENAI_CODE_INTERPRETER_MEMORY=1g
+MAX_ATTACHMENT_BYTES=5242880
+MAX_ATTACHMENT_CHARS=60000
+PROMPT_FILE=data/prompts.txt
+GENERATED_FILES_DIR=data/generated
+PUBLIC_BASE_URL=http://localhost:8080
+```
+
+Também é possível usar variáveis do Windows:
+
+```powershell
+setx OPENAI_API_KEY "sua_chave_aqui"
+setx OPENAI_MODEL "gpt-4.1-mini"
+```
+
+Depois de usar `setx`, feche e abra o terminal novamente.
+
+### 3. Rodar o backend
+
+```powershell
+Set-Location backend
 mvn spring-boot:run
 ```
 
@@ -87,17 +260,81 @@ O backend ficará disponível em:
 http://localhost:8080
 ```
 
-## Rodando o frontend
+### 4. Rodar o frontend
 
-Abra o arquivo:
+Opção simples:
 
 ```text
-frontend/index.html
+Abra frontend/index.html no navegador.
 ```
 
-Também é possível usar a extensão Live Server do Visual Studio Code.
+Opção recomendada no VS Code:
+
+```text
+Abra frontend/index.html com Live Server.
+```
+
+---
+
+## Configuração de Ambiente
+
+As configurações principais ficam em `backend/src/main/resources/application.properties` e podem ser sobrescritas pelo arquivo `backend/.env`.
+
+| Variável | Padrão | Descrição |
+|---|---:|---|
+| `OPENAI_API_KEY` | vazio | Chave usada para autenticar na OpenAI. |
+| `OPENAI_MODEL` | `gpt-4.1-mini` | Modelo usado na Responses API. |
+| `OPENAI_BASE_URL` | `https://api.openai.com/v1` | Base URL da API. |
+| `OPENAI_CODE_INTERPRETER_MEMORY` | `1g` | Memória do container do Code Interpreter. |
+| `MAX_ATTACHMENT_BYTES` | `5242880` | Limite de tamanho validado no domínio. |
+| `MAX_ATTACHMENT_CHARS` | `60000` | Limite de caracteres extraídos do anexo. |
+| `PROMPT_FILE` | `data/prompts.txt` | Arquivo local de histórico. |
+| `GENERATED_FILES_DIR` | `data/generated` | Diretório dos arquivos gerados. |
+| `PUBLIC_BASE_URL` | `http://localhost:8080` | Base para links salvos no histórico. |
+
+---
+
+## Como Usar
+
+### Pela interface web
+
+1. Abra o frontend.
+2. Digite um prompt detalhado.
+3. Opcionalmente, arraste ou selecione um arquivo `pdf`, `docx`, `xlsx` ou `txt`.
+4. Clique em **Gerar arquivo**.
+5. Aguarde a geração.
+6. O navegador baixa o arquivo automaticamente.
+7. Use **Baixar novamente** se precisar recuperar o último resultado.
+
+### Exemplos de prompt
+
+Prompt para Excel:
+
+```text
+Gere uma planilha Excel com 10 produtos de papelaria, contendo produto, quantidade, preço unitário, subtotal e uma linha final com o total geral.
+```
+
+Prompt para Word:
+
+```text
+Gere um documento Word explicando de forma didática o que é uma API REST, com título, seções, exemplos práticos e conclusão.
+```
+
+Prompt usando anexo:
+
+```text
+Leia o conteúdo do anexo e gere uma planilha xlsx com os pontos principais, responsáveis, prazos e status sugerido.
+```
+
+---
 
 ## Endpoints
+
+Base URL local:
+
+```text
+http://localhost:8080/api/documentos
+```
 
 ### Gerar documento
 
@@ -106,36 +343,54 @@ POST /api/documentos/gerar
 Content-Type: multipart/form-data
 ```
 
-Campos esperados no multipart:
+Campos:
 
-- `prompt` (obrigatório)
-- `file` (opcional, extensões permitidas: `pdf`, `docx`, `xlsx`, `txt`)
+| Campo | Obrigatório | Tipo | Descrição |
+|---|---:|---|---|
+| `prompt` | Sim | Texto | Instrução enviada à IA. |
+| `file` | Não | Arquivo | Anexo opcional `pdf`, `docx`, `xlsx` ou `txt`. |
 
 Exemplo com `curl`:
 
-```bash
-curl -X POST http://localhost:8080/api/documentos/gerar \
-  -F "prompt=Resuma o conteúdo do anexo em uma planilha xlsx" \
+```powershell
+curl.exe -X POST "http://localhost:8080/api/documentos/gerar" `
+  -F "prompt=Resuma o conteúdo do anexo em uma planilha xlsx" `
   -F "file=@./meu_documento.pdf"
 ```
 
-A resposta agora é JSON com metadados + URL de download:
+Resposta:
 
 ```json
 {
   "mensagem": "Arquivo gerado com sucesso.",
-  "id": "...",
+  "id": "b1e7d5b0-0000-0000-0000-abc123",
   "filename": "resposta_ia.xlsx",
   "contentType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   "size": 12345,
-  "downloadUrl": "/api/documentos/download/..."
+  "downloadUrl": "/api/documentos/download/b1e7d5b0-0000-0000-0000-abc123"
 }
 ```
+
+### Baixar arquivo gerado
+
+```http
+GET /api/documentos/download/{id}
+```
+
+Retorna bytes do arquivo com `Content-Disposition: attachment`.
 
 ### Consultar histórico
 
 ```http
 GET /api/documentos/historico
+```
+
+Resposta:
+
+```json
+{
+  "historico": "..."
+}
 ```
 
 ### Limpar histórico
@@ -144,74 +399,143 @@ GET /api/documentos/historico
 DELETE /api/documentos/historico
 ```
 
-## Onde o histórico é salvo
+Resposta:
 
-Por padrão:
-
-```text
-backend/data/prompts.txt
+```json
+{
+  "mensagem": "Histórico de prompts apagado com sucesso."
+}
 ```
 
-A última resposta bruta da OpenAI é salva para depuração em:
+---
+
+## Persistência Local
+
+Por padrão, o backend grava dados locais dentro de `backend/data` quando executado a partir da pasta `backend`.
+
+```text
+backend/data/
+├── prompts.txt
+├── last-openai-response.json
+└── generated/
+    └── {uuid}_resposta_ia.xlsx
+```
+
+| Arquivo/Diretório | Função |
+|---|---|
+| `data/prompts.txt` | Histórico textual de prompts e links gerados. |
+| `data/generated` | Arquivos finais disponíveis para download. |
+| `data/last-openai-response.json` | Última resposta bruta da OpenAI para depuração. |
+
+Esses arquivos são ignorados pelo Git via `.gitignore`.
+
+---
+
+## Segurança
+
+- Nunca versionar `backend/.env`.
+- Nunca colocar `OPENAI_API_KEY` em código, README, prints ou commits.
+- O arquivo `backend/.env.example` deve conter apenas placeholders.
+- O frontend não fala diretamente com a OpenAI; ele chama apenas o backend local.
+- O backend valida extensão e tamanho de anexos antes do processamento.
+- IDs de download são validados para evitar path traversal.
+- Se uma chave for exposta acidentalmente, revogue/rotacione imediatamente no painel da OpenAI.
+
+---
+
+## Troubleshooting
+
+### `Backend offline ou inacessível em http://localhost:8080`
+
+Verifique se o backend está rodando:
+
+```powershell
+Set-Location backend
+mvn spring-boot:run
+```
+
+### `A variável de ambiente OPENAI_API_KEY não foi configurada`
+
+Configure `backend/.env` ou use `setx`:
+
+```powershell
+setx OPENAI_API_KEY "sua_chave_aqui"
+```
+
+Depois reabra o terminal.
+
+### `Extensão não suportada`
+
+Use apenas:
+
+```text
+pdf, docx, xlsx, txt
+```
+
+### Arquivo muito grande
+
+Confira os limites:
+
+- `spring.servlet.multipart.max-file-size=25MB`
+- `spring.servlet.multipart.max-request-size=30MB`
+- `MAX_ATTACHMENT_BYTES=5242880`
+
+### A OpenAI respondeu, mas não veio arquivo
+
+Para prompts que pedem `docx` ou `xlsx`, o backend espera uma anotação `container_file_citation`.
+
+Verifique:
 
 ```text
 backend/data/last-openai-response.json
 ```
 
-Esse arquivo ajuda a entender se a resposta trouxe `container_file_citation`, `container_id` e `file_id`.
+---
 
-## Como o backend baixa o arquivo
+## Desenvolvimento
 
-Depois que a OpenAI gera o arquivo, a resposta contém uma anotação parecida com:
+### Compilar backend
 
-```json
-{
-  "type": "container_file_citation",
-  "container_id": "cntr_...",
-  "file_id": "cfile_...",
-  "filename": "resposta_ia.xlsx"
-}
+```powershell
+Set-Location backend
+mvn -q -DskipTests compile
 ```
 
-O backend então faz:
+### Rodar testes Maven
 
-```http
-GET /v1/containers/{container_id}/files/{file_id}/content
-Authorization: Bearer OPENAI_API_KEY
+```powershell
+Set-Location backend
+mvn test
 ```
 
-E devolve os bytes para o navegador.
+### Swagger/OpenAPI
 
-## Diferença para a versão didática com Apache POI
-
-### Versão com Apache POI
+Com o backend rodando, acesse:
 
 ```text
-OpenAI devolve JSON estruturado
-→ Java monta o arquivo com Apache POI
+http://localhost:8080/swagger-ui.html
 ```
 
-Melhor para ensinar Java, OO e bibliotecas de documentos.
-
-### Versão com Code Interpreter
+ou:
 
 ```text
-OpenAI gera o arquivo pronto
-→ Java só baixa e entrega
+http://localhost:8080/swagger-ui/index.html
 ```
 
-Mais impressionante e mais curta, mas mais dependente da plataforma da OpenAI.
+---
 
-## Sugestões de teste
+## Próximos Passos
 
-Prompt para Excel:
+- Adicionar autenticação de usuário.
+- Persistir histórico em banco de dados.
+- Exibir progresso por etapas na interface.
+- Adicionar pré-validação visual mais detalhada do upload.
+- Criar suíte de testes automatizados para use cases e adapters.
+- Publicar backend e frontend em ambiente cloud.
+- Adicionar fila para processamentos longos.
 
-```text
-Gere uma planilha Excel com 10 produtos de papelaria, contendo produto, quantidade, preço unitário, subtotal e uma linha final de total geral.
-```
+---
 
-Prompt para Word:
+## Licença
 
-```text
-Gere um documento Word explicando de forma didática o que é uma API REST, com título, seções, exemplos e conclusão.
-```
+Projeto didático para estudo de integração entre frontend, Spring Boot e OpenAI Responses API.
